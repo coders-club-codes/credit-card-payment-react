@@ -48,6 +48,7 @@
   justify-content: center;
   align-items: center;
   cursor: pointer;
+  margin-top: 20px;
 }
 
 .input::-webkit-outer-spin-button,

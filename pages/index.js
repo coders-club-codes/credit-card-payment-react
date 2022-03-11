@@ -1,32 +1,48 @@
+import {
+  Elements,
+  useElements,
+  useStripe,
+  CardElement,
+} from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
 import Axios from 'axios';
 import Head from 'next/head';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import styles from '../styles/Home.module.css';
 
-export default function Home() {
-  const [cardNumber, setCardNumber] = useState('');
-  const [expirationDate, setExpirationDate] = useState('');
-  const [cvc, setCvc] = useState('');
+const stripePromise = loadStripe('SUA_CHAVE_PUBLISHABLE');
+
+function Home({ intent }) {
+  const stripe = useStripe();
+  const elements = useElements();
 
   const handleSubmit = useCallback(
     async (event) => {
-      event.preventDefault();
+      try {
+        console.log('Chegou aqui');
+        event.preventDefault();
 
-      const { data: token } = await Axios.post('/api/token', {
-        card: {
-          number: cardNumber,
-          exp_month: expirationDate.split('/')[0],
-          exp_year: expirationDate.split('/')[1],
-          cvc,
-        },
-      });
+        if (!stripe || !elements) {
+          return;
+        }
 
-      await Axios.post('/api/charge', {
-        amount: 3500,
-        token: token.id,
-      });
+        const cardElement = elements.getElement(CardElement);
+
+        const result = await stripe.confirmCardPayment(intent.client_secret, {
+          payment_method: {
+            card: cardElement,
+            billing_details: {
+              name: 'Levir',
+            },
+          },
+        });
+
+        console.log(result);
+      } catch (error) {
+        console.log(error);
+      }
     },
-    [cardNumber, expirationDate, cvc]
+    [stripe, elements]
   );
 
   return (
@@ -44,41 +60,9 @@ export default function Home() {
             <h3>Por 500,00</h3>
           </div>
 
-          <div>
-            <span>Número do cartão</span>
-            <div>
-              <input
-                placeholder="1234 1234 1234 1234"
-                className={styles.input}
-                type="number"
-                value={cardNumber}
-                onChange={(e) => setCardNumber(e.target.value)}
-              />
-            </div>
-          </div>
+          <CardElement className={styles.input} />
 
           <div>
-            <span>Data de expiração</span>
-            <div>
-              <input
-                placeholder="MM/YYYY"
-                className={styles.input}
-                value={expirationDate}
-                onChange={(e) => setExpirationDate(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div>
-            <span>CVC</span>
-            <div>
-              <input
-                placeholder="123"
-                className={styles.input}
-                value={cvc}
-                onChange={(e) => setCvc(e.target.value)}
-              />
-            </div>
             <button className={styles.button} type="submit">
               Comprar
             </button>
@@ -86,5 +70,31 @@ export default function Home() {
         </div>
       </div>
     </form>
+  );
+}
+
+export default function HomeWrapper() {
+  const [intent, setIntent] = useState();
+
+  useEffect(() => {
+    async function loadIntent() {
+      const { data } = await Axios.post('/api/intent', {
+        amount: 4800,
+      });
+
+      setIntent(data);
+    }
+    loadIntent();
+  }, []);
+
+  return !intent ? (
+    <div className={styles.container}>Loading</div>
+  ) : (
+    <Elements
+      stripe={stripePromise}
+      options={{ clientSecret: intent.client_secret }}
+    >
+      <Home intent={intent} />
+    </Elements>
   );
 }
