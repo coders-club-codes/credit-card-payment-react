@@ -22,7 +22,6 @@ export default function Home() {
       });
 
       await Axios.post('/api/charge', {
-        amount: 3500,
         token: token.id,
       });
     },
