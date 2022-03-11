@@ -19,7 +19,6 @@ function Home({ intent }) {
   const handleSubmit = useCallback(
     async (event) => {
       try {
-        console.log('Chegou aqui');
         event.preventDefault();
 
         if (!stripe || !elements) {
@@ -78,9 +77,7 @@ export default function HomeWrapper() {
 
   useEffect(() => {
     async function loadIntent() {
-      const { data } = await Axios.post('/api/intent', {
-        amount: 4800,
-      });
+      const { data } = await Axios.post('/api/intent');
 
       setIntent(data);
     }
